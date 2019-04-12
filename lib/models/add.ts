@@ -1,23 +1,35 @@
-import ActivityLogger from "../activity-logger";
 import Repository from "../repository";
+import { Editor, RepositoryCommand } from "./common";
 
-const getCurrentFileInRepo = (repo: Repository) => {
-  const activeEditor = atom.workspace.getActiveTextEditor();
-  const path = activeEditor && activeEditor.getPath();
-  if (!path) return null;
-  return repo.relativize(path);
-};
+interface Params {
+  stageEverything?: boolean;
+}
 
-export default async (stageEverything: boolean = false) => {
-  const repo = await Repository.getCurrent();
+class Add extends RepositoryCommand<Params | void> {
+  async execute(repo: Repository, params = { stageEverything: false }) {
+    const path = params.stageEverything ? "." : Editor.getCurrentFileInRepo(repo) || ".";
+    const result = await repo.stage([path]);
+    return {
+      repoName: repo.getName(),
+      message: `add ${path}`,
+      ...result
+    };
+  }
+}
 
-  if (!repo) return atom.notifications.addInfo("No repository found");
+class AddModified extends RepositoryCommand<void> {
+  async execute(repo: Repository) {
+    const result = await repo.stage(["."], { update: true });
 
-  const path = stageEverything ? "." : getCurrentFileInRepo(repo) || ".";
-  const result = await repo.stage([path]);
-  ActivityLogger.record({
-    repoName: repo.getName(),
-    message: `add ${path}`,
-    ...result
-  });
-};
+    return {
+      repoName: repo.getName(),
+      message: `add modified files`,
+      ...result
+    };
+  }
+}
+
+const gitAdd = new Add();
+const gitAddModified = new AddModified();
+
+export { gitAdd, gitAddModified };

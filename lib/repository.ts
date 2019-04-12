@@ -75,6 +75,10 @@ export default class Repository {
     return path.basename(this.repo.getWorkingDirectory());
   }
 
+  async createBranch(name: string) {
+    return git(["checkout", "-b", name], { cwd: this.repo.getWorkingDirectory() });
+  }
+
   async getBranchesForRemote(remote: string): Promise<string[]> {
     const { failed, output } = await git(["branch", "-r", "--no-color"], {
       cwd: this.repo.getWorkingDirectory()
